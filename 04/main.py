@@ -15,21 +15,27 @@ class MutBool():
 
 class Board():
 
-    def __init__(self, draw_state, text):
+    def __init__(self, draw_state, board_state, text):
         self.state_rows = []
         for l in text:
             self.state_rows.append([[int(i), draw_state[int(i)]] for i in l.split()])
 
-        self.state_cols = []
+        self.fast_rows = []
+        for r in self.state_rows:
+            self.fast_rows.append([v[1] for v in r])
+            for v in r:
+                board_state[v[0]].append(self)
+
+        self.fast_cols = []
         for nr, _ in enumerate(self.state_rows[0]):
-            self.state_cols.append([row[nr] for row in self.state_rows])
+            self.fast_cols.append([row[nr][1] for row in self.state_rows])
 
     def winning(self):
-        for row in self.state_rows:
-            if not any(v[1].val == False for v in row):
+        for row in self.fast_rows:
+            if all(row):
                 return True
-        for col in self.state_cols:
-            if not any(v[1].val == False for v in col):
+        for col in self.fast_cols:
+            if all(col):
                 return True
         return False
 
@@ -62,23 +68,25 @@ def parse_in(std_in):
     split = std_in.splitlines()
     draws = [int(i) for i in split[0].split(',')]
     draw_state = defaultdict(lambda: MutBool(False))
+    board_state = defaultdict(list)
     b_txt = split[2:]
     boards = []
     while(len(b_txt) >= 5):
-        boards.append(Board(draw_state, b_txt[:5]))
+        boards.append(Board(draw_state, board_state, b_txt[:5] ))
         b_txt = b_txt[5:]
         if b_txt:
             b_txt = b_txt[1:]
 
-    return draw_state, draws, boards
+    return draw_state, draws, boards, board_state
 
 def first_task(parsed_lines):
     draw_state = parsed_lines[0]
     draws = parsed_lines[1]
     boards = parsed_lines[2]
+    board_state = parsed_lines[3]
     for d in draws:
         draw_state[d].val = True
-        for b in boards:
+        for b in board_state[d]:
             if b.winning():
                 return b.score(d)
     return 0
@@ -87,13 +95,19 @@ def second_task(parsed_lines):
     draw_state = parsed_lines[0]
     draws = parsed_lines[1]
     boards = parsed_lines[2]
+    board_state = parsed_lines[3]
     for d in draws:
         draw_state[d].val = True
         if len(boards) == 1:
             if boards[0].winning():
                 return boards[0].score(d)
         else:
-            boards = [b for b in boards if not b.winning()]
+            wins = [b for b in board_state[d] if b.winning()]
+            for w in wins:
+                for key in board_state:
+                    if w in board_state[key]:
+                        board_state[key].remove(w)
+                boards.remove(w)
     return 0
 
 def main():
